@@ -1,12 +1,33 @@
-import requests, regex, html
+import requests, regex, html, sys
 
-from typing import Optional, Union
+from typing import (
+    Any,
+    Union,
+    Optional,
+)
 from collections import namedtuple
+
+if sys.version_info.major < 3:
+    import future_annotations
+    future_annotations.register()
+
+del sys
 
 Lyrics = namedtuple("Lyrics", "lyrics original_url vocaloid")
 
-def search(*song: Union[str, bytes], artist: Optional[str] = ""):
-    response = requests.get("https://www.google.com/search?q={}+site%3Avocaro.wikidot.com".format(str(*song) + artist))
+def search(**kwargs: Any):
+    """보카로 가사위키 링크를 가져옵니다.\n\n
+    var song: str | Any
+    var artist: Optional[str] | None = ""
+    ```python
+    import VocaroLyrics
+
+    print(VocaroLyrics.search(song="소실"))
+    """
+    song: Union[str, Any] = kwargs["song"]
+    artist: Optional[str] = kwargs.get("artist") if kwargs.get("artist") != None else ""
+
+    response = requests.get("https://www.google.com/search?q={}+site%3Avocaro.wikidot.com".format(song + artist))
     s = regex.findall(r"http://vocaro.wikidot.com/.*", html.unescape(response.text))
     try:
         d = s[0][0:s[0].index("&")]
@@ -18,8 +39,21 @@ def search(*song: Union[str, bytes], artist: Optional[str] = ""):
 
     return d
 
-def get_lyrics(*song: Union[str, bytes], indents: Optional[int] = 1, artist: Optional[str] = ""):
-    song_url = search(*song, artist=artist)
+def get_lyrics(**kwargs: Any):
+    """보카로 가사위키에서 가사를 가져옵니다.\n\n
+    var song: str | Any
+    var artist: Optional[str] | None = ""
+    var indents: Optional[int] | None = 1
+    ```python
+    import VocaroLyrics
+
+    print(VocaroLyrics.get_lyrics(song="animal", artist="deco*27", indents=2))
+    """
+    song: Union[str, Any] = kwargs["song"]
+    indents: Optional[int] = kwargs.get("indents") if kwargs.get("indents") != None else 1
+    artist: Optional[str] = kwargs.get("artist") if kwargs.get("artist") != None else ""
+
+    song_url = search(song=song, artist=artist)
 
     lyrics = requests.get(song_url).text
     lyrics = html.unescape(lyrics)
