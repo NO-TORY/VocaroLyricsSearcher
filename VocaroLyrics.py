@@ -1,4 +1,11 @@
-import requests, regex, html, sys
+import requests
+import sys
+import html
+
+try:
+    import regex
+except ImportError:
+    import re as regex
 
 from typing import (
     Any,
@@ -59,7 +66,7 @@ def get_lyrics(session: Optional[requests.Session] = None, **kwargs: Any):
     var artist: Optional[str] | None = ""
     var indents: Optional[int] | None = 1
     rtype: Lyrics (namedtuple)
-    return: lyrics, original_url, vocaloid
+    return: 가사, 오리지널 링크, 보컬로이드
     ```python
     import VocaroLyrics, requests
 
