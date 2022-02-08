@@ -5,7 +5,7 @@
 ```python
 import VocaroLyrics, requests
 
-s = requests.Sesssion()
+s = requests.Session()
 
 print(VocaroLyrics.get_lyrics(s, song="animal", artist="deco*27").lyrics)
 ```
