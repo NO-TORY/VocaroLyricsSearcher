@@ -10,9 +10,9 @@ ResultSet = namedtuple("ResultSet", "lyrics original_url vocaloid artist title")
 
 __all__ = (
     "asyncSearch",
-    "asyncGetLyrics",
+    "asyncGet",
     "Search",
-    "GetLyrics"
+    "Get"
 )
 
 def Search(**kwargs: Any):
@@ -29,7 +29,7 @@ def Search(**kwargs: Any):
 
     return asyncio.get_event_loop().run_until_complete(asyncSearch(**kwargs))
 
-def GetLyrics(song: Union[str, Any], artist: Optional[str] = "", indents: Optional[int] = 1):
+def Get(song: Union[str, Any], artist: Optional[str] = "", indents: Optional[int] = 1):
     """보카로 가사위키에서 가사를 가져옵니다.\n\n
     var song: str | Any
     var artist: Optional[str] | None = ""
@@ -43,7 +43,7 @@ def GetLyrics(song: Union[str, Any], artist: Optional[str] = "", indents: Option
     print(VocaroLyrics.GetLyrics("animal", "deco*27"))
     """
 
-    return asyncio.get_event_loop().run_until_complete(asyncGetLyrics(song, artist, indents))
+    return asyncio.get_event_loop().run_until_complete(asyncGet(song, artist, indents))
 
 async def asyncSearch(**kwargs: Any):
     """보카로 가사위키 링크를 가져옵니다.\n\n
@@ -79,7 +79,7 @@ async def asyncSearch(**kwargs: Any):
         return d
                 
 
-async def asyncGetLyrics(song: Union[str, Any], artist: Optional[str] = "", indents: Optional[int] = 1):
+async def asyncGet(song: Union[str, Any], artist: Optional[str] = "", indents: Optional[int] = 1):
     """보카로 가사위키에서 가사를 가져옵니다.\n\n
     var song: str | Any
     var artist: Optional[str] | None = ""
