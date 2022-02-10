@@ -7,7 +7,7 @@ import VocaroLyrics, requests
 
 s = requests.Session()
 
-print(VocaroLyrics.get_lyrics(s, song="animal", artist="deco*27").lyrics)
+print(VocaroLyrics.Get("animal", "deco*27").lyrics)
 ```
 ## installation
 ```shell
