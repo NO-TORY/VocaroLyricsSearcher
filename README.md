@@ -3,9 +3,7 @@
 
 # usage
 ```python
-import VocaroLyrics, requests
-
-s = requests.Session()
+import VocaroLyrics
 
 print(VocaroLyrics.Get("animal", "deco*27").lyrics)
 ```
