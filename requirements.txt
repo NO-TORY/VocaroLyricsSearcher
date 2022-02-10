@@ -1,4 +1,4 @@
 aiohttp==3.7.4post0
 bs4==0.0.1
-http5lib==1.1
+html5lib==1.1
 fake_useragent==0.1.11
