@@ -1,33 +1,51 @@
-import requests
-import sys
-import html
-
-try:
-    import regex
-except ImportError:
-    import re as regex
-
-from typing import (
-    Any,
-    Union,
-    Optional,
-)
+import aiohttp
+import re
+import asyncio
 from collections import namedtuple
+from bs4 import BeautifulSoup
+from typing import Optional, Union, Any
+from fake_useragent import UserAgent
 
-if sys.version_info.major < 3:
-    import future_annotations
-    future_annotations.register()
-
-del sys
-
-Lyrics = namedtuple("Lyrics", "lyrics original_url vocaloid")
+ResultSet = namedtuple("ResultSet", "lyrics original_url vocaloid artist title")
 
 __all__ = (
-    "search",
-    "get_lyrics",
+    "asyncSearch",
+    "asyncGetLyrics",
+    "Search",
+    "GetLyrics"
 )
 
-def search(session: Optional[requests.Session] = None, **kwargs: Any):
+def Search(**kwargs: Any):
+    """보카로 가사위키 링크를 가져옵니다.\n\n
+    var song: str | Any
+    var artist: Optional[str] | None = ""
+    rtype: Any
+    return: 보카로 가사 위키 URL
+    ```python
+    import VocaroLyrics
+
+    print(VocaroLyrics.Search(song="소실"))
+    """    
+
+    return asyncio.get_event_loop().run_until_complete(asyncSearch(**kwargs))
+
+def GetLyrics(song: Union[str, Any], artist: Optional[str] = "", indents: Optional[int] = 1):
+    """보카로 가사위키에서 가사를 가져옵니다.\n\n
+    var song: str | Any
+    var artist: Optional[str] | None = ""
+    var indents: Optional[int] | None = 1
+    var session: Optional[Session] | None = None
+    rtype: Lyrics
+    return: lyrics, original_url, vocaloid, artist, title 
+    ```python
+    import VocaroLyrics
+
+    print(VocaroLyrics.GetLyrics("animal", "deco*27"))
+    """
+
+    return asyncio.get_event_loop().run_until_complete(asyncGetLyrics(song, artist, indents))
+
+async def asyncSearch(**kwargs: Any):
     """보카로 가사위키 링크를 가져옵니다.\n\n
     var session: Optional[Session] | None = None
     var song: str | Any
@@ -35,70 +53,79 @@ def search(session: Optional[requests.Session] = None, **kwargs: Any):
     rtype: Any
     return: 보카로 가사 위키 URL
     ```python
-    import VocaroLyrics, requests
+    import VocaroLyrics, asyncio
 
-    session = requests.Session()
+    async def main():
+    \treturn await VocaroLyrics.asyncSearch(song="animal", artist="deco*27")
 
-    print(VocaroLyrics.search(session, song="소실"))
+    print(asyncio.run(main()))
+
     """
     song: Union[str, Any] = kwargs["song"]
     artist: Optional[str] = kwargs.get("artist") if kwargs.get("artist") != None else ""
 
-    if session:
-        response = session.get("https://www.google.com/search?q={}+site%3Avocaro.wikidot.com".format(song + artist))
-    else:
-        response = requests.get("https://www.google.com/search?q={}+site%3Avocaro.wikidot.com".format(song + artist))
-    s = regex.findall(r"http://vocaro.wikidot.com/.*", html.unescape(response.text))
-    try:
-        d = s[0][0:s[0].index("&")]
-    except:
-        raise TypeError
+    async with aiohttp.ClientSession() as session:
+        async with session.get("https://www.google.com/search?q={}+site%3Avocaro.wikidot.com".format(song + artist), proxy=None, headers={"User-Agent": UserAgent().random}) as response:
+            link_list = re.findall(r"http://vocaro.wikidot.com/.*", await response.text("utf-8"))
+            try:
+                d = link_list[0][0:link_list[0].index("&")]
+            except:
+                raise TypeError
 
-    if all([k == "http://vocaro.wikidot.com" or k == "http://vocaro.wikidot.com/" for k in s]):
-        raise TypeError
+            if all([link == "http://vocaro.wikidot.com" or link == "http://vocaro.wikidot.com/" for link in link_list]):
+                raise TypeError
 
-    return d
+            await session.close()
+        return d
+                
 
-def get_lyrics(session: Optional[requests.Session] = None, **kwargs: Any):
+async def asyncGetLyrics(song: Union[str, Any], artist: Optional[str] = "", indents: Optional[int] = 1):
     """보카로 가사위키에서 가사를 가져옵니다.\n\n
-    var session: Optional[Session] | None = None
     var song: str | Any
     var artist: Optional[str] | None = ""
     var indents: Optional[int] | None = 1
-    rtype: Lyrics (namedtuple)
-    return: 가사, 오리지널 링크, 보컬로이드
+    var session: Optional[Session] | None = None
+    rtype: Lyrics
+    return: lyrics, original_url, vocaloid, artist, title 
     ```python
-    import VocaroLyrics, requests
+    import VocaroLyrics, asyncio
 
-    session = requests.Session()
+    async def main():
+        return await VocaroLyrics.asyncGetLyrics("animal", "deco*27")
 
-    print(VocaroLyrics.get_lyrics(session, song="animal", artist="deco*27", indents=2).lyrics)
+    print(asyncio.run(main()))
     """
-    song: Union[str, Any] = kwargs["song"]
-    indents: Optional[int] = kwargs.get("indents") if kwargs.get("indents") != None else 1
-    artist: Optional[str] = kwargs.get("artist") if kwargs.get("artist") != None else ""
+    song_url = await asyncSearch(song=song, artist=artist)
 
-    song_url = search(session, song=song, artist=artist)
+    async with aiohttp.ClientSession(trust_env=True) as session:
+        async with session.get(song_url, headers={"User-Agent": UserAgent().random, "content-type": "text/html; charset=utf-8"}, proxy=None) as response:
+            lyrics = await response.text("utf-8")
 
-    if session:
-        lyrics = session.get(song_url).text
-    else:
-        lyrics = requests.get(song_url).text
-    lyrics = html.unescape(lyrics)
+            soup = BeautifulSoup(lyrics, "html5lib")
+            
+            _lyrics = soup.find_all("td")
+            _lyrics_group = []
 
-    html_replacements = ("<span style=\"white-space: pre-wrap;\">---", "<span class=\"ruby\">", "---</span>")
+            for _lyric in _lyrics:
+                _lyrics_group.append(_lyric.get_text(strip=True))
 
-    d = regex.findall(r"<td>.*", lyrics)
-    s = str("\n"*indents).join(d)
-    s = regex.sub(r"(<td>)|(</td>)", "", s)
-    s = s.replace("<span class=\"rt\">", "(")
-    s = s.replace("</span></span>", ")")
-    for r in html_replacements:
-        s = s.replace(r, "")
-    s = regex.sub(r"(<a class.*)|(<a href.*)", "", s)
-    
-    return Lyrics(
-        s.lstrip().rstrip(),
-        regex.sub(r"(target.*)", "", d[0].split("href=")[1].replace("\"", "")), 
-        regex.sub(r"(<a href=\".*\">)|(</a>)|(<td>)|(</td>)", "", d[3])
-    )   
+            _temp_lyrics = "\n".join(_lyrics_group).splitlines()
+
+            _artist = _temp_lyrics[2]
+            _vocaloid = _temp_lyrics[4]
+
+            for _ in range(5):
+                del _temp_lyrics[0]
+
+            _original_url = (re.findall(r"<td>.*", lyrics)[0].split("href=")[1].split(" ")[0].replace("\"", ""))
+            _lyrics = str("\n"*indents).join(_temp_lyrics)
+            _title = soup.find(attrs={"id": "page-title"}).get_text(strip=True)
+
+    await session.close()
+    return ResultSet(
+        _lyrics,
+        _original_url,
+        _vocaloid,
+        _artist,
+        _title
+    )
