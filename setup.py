@@ -7,7 +7,7 @@ with open("requirements.txt", "r", encoding="utf-8") as f:
 
 setup(
     name="VocaroLyrics",
-    version="1.0.4",
+    version="1.0.5",
     description="보카로 가사 위키에서 가사를 검색해주는 라이브러리",
     author="노토리",
     install_requires=requirements,
